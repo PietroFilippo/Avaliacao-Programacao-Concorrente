@@ -1,14 +1,14 @@
 import java.util.Random;
 
 // Representa uma estação de montagem que solicita peças da fábrica para montar veículos
-public class AssemblyStation implements Runnable {
-    private final String stationId;
-    private final Factory factory;
+public class EstacaoMontagem implements Runnable {
+    private final String idEstacao;
+    private final Fabrica fabrica;
     private final Random random = new Random();
     
-    public AssemblyStation(String stationId, Factory factory) {
-        this.stationId = stationId;
-        this.factory = factory;
+    public EstacaoMontagem(String idEstacao, Fabrica fabrica) {
+        this.idEstacao = idEstacao;
+        this.fabrica = fabrica;
     }
     
     @Override
@@ -16,24 +16,24 @@ public class AssemblyStation implements Runnable {
         try {
             while (!Thread.currentThread().isInterrupted()) {
                 // Solicita uma peça da fábrica
-                boolean partAcquired = factory.requestPart();
+                boolean pecaAdquirida = fabrica.solicitarPeca();
                 
-                if (partAcquired) {
-                    System.out.println("Estação " + stationId + " adquiriu uma peça para montagem.");
+                if (pecaAdquirida) {
+                    System.out.println("Estação " + idEstacao + " adquiriu uma peça para montagem.");
                     
                     // Simula o trabalho de montagem
                     Thread.sleep(random.nextInt(1000) + 500);
                     
-                    System.out.println("Estação " + stationId + " completou o trabalho de montagem.");
+                    System.out.println("Estação " + idEstacao + " completou o trabalho de montagem.");
                 } else {
                     // Aviso se não há peças disponíveis
-                    System.out.println("Estação " + stationId + " aguardando peças disponíveis.");
+                    System.out.println("Estação " + idEstacao + " aguardando peças disponíveis.");
                     Thread.sleep(2000);
                 }
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            System.out.println("A operação da estação " + stationId + " foi interrompida.");
+            System.out.println("A operação da estação " + idEstacao + " foi interrompida.");
         }
     }
 } 
