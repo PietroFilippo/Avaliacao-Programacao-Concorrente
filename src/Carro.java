@@ -1,6 +1,8 @@
+import java.io.Serializable;
 
 // Representa um carro produzido por um funcionário em uma estação de produção
-public class Carro {
+public class Carro implements Serializable {
+    private static final long serialVersionUID = 1L;
     private static int proximoId = 1;
     
     private final int id;

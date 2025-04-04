@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 // Representa uma estação de produção com 5 funcionários dispostos em círculo, cada um com uma ferramenta à esquerda e à direita
 public class EstacaoProducao {
@@ -47,7 +48,35 @@ public class EstacaoProducao {
     
     // Para todos os funcionários da estação
     public void parar() {
-        executorService.shutdownNow();
+        System.out.println("Iniciando encerramento da estação de produção " + idEstacao + "...");
+        
+        // Primeiro sinaliza a todos os funcionários para pararem
+        for (Funcionario funcionario : funcionarios) {
+            funcionario.parar();
+        }
+        
+        // Primeiro tenta shutdown normal
+        executorService.shutdown();
+        
+        try {
+            // Aguarda por até 5 segundos para término normal
+            if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                System.out.println("Alguns funcionários não terminaram a tempo, forçando encerramento...");
+                // Se não terminar em 5 segundos, força encerramento
+                executorService.shutdownNow();
+                
+                // Aguarda mais 5 segundos pela interrupção
+                if (!executorService.awaitTermination(5, TimeUnit.SECONDS)) {
+                    System.err.println("Não foi possível encerrar todos os funcionários da estação " + idEstacao);
+                }
+            }
+        } catch (InterruptedException e) {
+            // Preserva o status de interrupção
+            Thread.currentThread().interrupt();
+            // Força encerramento em caso de interrupção
+            executorService.shutdownNow();
+        }
+        
         System.out.println("Estação de produção " + idEstacao + " parada.");
     }
     

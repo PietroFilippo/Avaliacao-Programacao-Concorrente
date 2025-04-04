@@ -9,6 +9,7 @@ public class Funcionario implements Runnable {
     private final EsteiraCircular esteira;
     private final Fabrica fabrica;
     private final Random random = new Random();
+    private volatile boolean running = true;
     
     private int carrosProduzidos = 0;
     
@@ -25,7 +26,12 @@ public class Funcionario implements Runnable {
     @Override
     public void run() {
         try {
-            while (!Thread.currentThread().isInterrupted()) {
+            while (running && !Thread.currentThread().isInterrupted()) {
+                // Verifica rapidamente se foi interrompido
+                if (Thread.currentThread().isInterrupted()) {
+                    break;
+                }
+                
                 // Tenta adquirir as ferramentas necessárias
                 if (adquirirFerramentas()) {
                     try {
@@ -34,7 +40,13 @@ public class Funcionario implements Runnable {
                             // Simula a produção do carro
                             System.out.println("Funcionário " + id + " da estação " + idEstacao + 
                                     " está produzindo um carro...");
-                            Thread.sleep(random.nextInt(1000) + 500);
+                            // Verifica interrupção durante o sleep
+                            for (int i = 0; i < 5; i++) {
+                                if (!running || Thread.currentThread().isInterrupted()) {
+                                    return;
+                                }
+                                Thread.sleep(random.nextInt(200) + 100);
+                            }
                             
                             // Cria um novo carro
                             Carro carro = new Carro(idEstacao, id);
@@ -50,41 +62,69 @@ public class Funcionario implements Runnable {
                             // Não há peças disponíveis, espera um pouco
                             System.out.println("Funcionário " + id + " da estação " + idEstacao + 
                                     " aguardando peças disponíveis.");
-                            Thread.sleep(2000);
+                            // Espera com verificação de interrupção
+                            for (int i = 0; i < 10 && running && !Thread.currentThread().isInterrupted(); i++) {
+                                Thread.sleep(200);
+                            }
                         }
                     } finally {
                         // Libera as ferramentas
                         liberarFerramentas();
                     }
                 } else {
-                    // Não conseguiu adquirir as ferramentas, aguarda um pouco e tenta novamente
-                    Thread.sleep(random.nextInt(100) + 50);
+                    // Não conseguiu adquirir as ferramentas, aguarda um tempo aleatório antes de tentar novamente
+                    // Adiciona uma espera com um tempo aleatório para reduzir contenção
+                    Thread.sleep(random.nextInt(100) + id * 20);
                 }
             }
         } catch (InterruptedException e) {
+            // Tratamento adequado de interrupção
             Thread.currentThread().interrupt();
-            System.out.println("Funcionário " + id + " da estação " + idEstacao + " foi interrompido.");
+        } finally {
+            System.out.println("Funcionário " + id + " da estação " + idEstacao + " foi encerrado. Carros produzidos: " + carrosProduzidos);
         }
     }
     
-    // Tenta adquirir ambas as ferramentas
-    private boolean adquirirFerramentas() {
-        // Implementa uma solução para evitar deadlock - adquire a ferramenta da esquerda primeiro
-        if (ferramentaEsquerda.pegar()) {
-            System.out.println("Funcionário " + id + " da estação " + idEstacao + 
-                    " pegou a ferramenta da esquerda " + ferramentaEsquerda.getId());
-            
-            // Tenta adquirir a ferramenta da direita
-            if (ferramentaDireita.pegar()) {
-                System.out.println("Funcionário " + id + " da estação " + idEstacao + 
-                        " pegou a ferramenta da direita " + ferramentaDireita.getId());
-                return true;
-            } else {
-                // Não conseguiu a ferramenta da direita, libera a da esquerda para evitar deadlock
-                ferramentaEsquerda.soltar();
-                System.out.println("Funcionário " + id + " da estação " + idEstacao + 
-                        " liberou a ferramenta da esquerda " + ferramentaEsquerda.getId() + " (não conseguiu a da direita)");
-                return false;
+    // Tenta adquirir ambas as ferramentas com uma estratégia para evitar deadlock e starvation
+    private boolean adquirirFerramentas() throws InterruptedException {
+        // Verifica se foi interrompido antes de tentar adquirir
+        if (!running || Thread.currentThread().isInterrupted()) {
+            throw new InterruptedException("Thread interrompida");
+        }
+        
+        // Para quebrar a simetria que causa deadlock, introduz ordem aleatória de aquisição
+        Ferramenta primeira, segunda;
+        
+        // Randomiza a ordem de aquisição para evitar um padrão que leve à starvation
+        if (random.nextBoolean()) {
+            primeira = ferramentaEsquerda;
+            segunda = ferramentaDireita;
+        } else {
+            primeira = ferramentaDireita;
+            segunda = ferramentaEsquerda;
+        }
+        
+        // Tenta pegar a primeira ferramenta com timeout
+        if (primeira.pegar()) {
+            try {
+                // Verifica novamente interrupção
+                if (!running || Thread.currentThread().isInterrupted()) {
+                    primeira.soltar();
+                    throw new InterruptedException("Thread interrompida");
+                }
+                
+                // Tenta pegar a segunda ferramenta com timeout - espera no máximo 100ms
+                if (segunda.pegar()) {
+                    return true;
+                } else {
+                    // Não conseguiu a segunda ferramenta, libera a primeira
+                    primeira.soltar();
+                    return false;
+                }
+            } catch (Exception e) {
+                // Se ocorrer algum erro, libera a primeira ferramenta
+                primeira.soltar();
+                throw e;
             }
         }
         
@@ -93,13 +133,22 @@ public class Funcionario implements Runnable {
     
     // Libera ambas as ferramentas
     private void liberarFerramentas() {
-        ferramentaEsquerda.soltar();
-        System.out.println("Funcionário " + id + " da estação " + idEstacao + 
-                " liberou a ferramenta da esquerda " + ferramentaEsquerda.getId());
+        try {
+            ferramentaEsquerda.soltar();
+        } catch (Exception e) {
+            System.err.println("Erro ao liberar ferramenta esquerda: " + e.getMessage());
+        }
         
-        ferramentaDireita.soltar();
-        System.out.println("Funcionário " + id + " da estação " + idEstacao + 
-                " liberou a ferramenta da direita " + ferramentaDireita.getId());
+        try {
+            ferramentaDireita.soltar();
+        } catch (Exception e) {
+            System.err.println("Erro ao liberar ferramenta direita: " + e.getMessage());
+        }
+    }
+    
+    // Sinaliza para o funcionário parar o trabalho
+    public void parar() {
+        this.running = false;
     }
     
     // Obtém o ID do funcionário

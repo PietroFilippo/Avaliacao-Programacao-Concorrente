@@ -1,3 +1,4 @@
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,11 +16,24 @@ public class Ferramenta {
     }
     
     public boolean pegar() {
-        return lock.tryLock();
+        try {
+            // Tenta adquirir o lock com timeout de 100ms para evitar espera indefinida
+            return lock.tryLock(100, TimeUnit.MILLISECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
     }
     
     public void soltar() {
-        lock.unlock();
+        try {
+            if (lock.tryLock(0, TimeUnit.MILLISECONDS)) {
+                lock.unlock(); // Já tinha o lock, libera o extra
+            }
+            lock.unlock(); // Libera o lock original
+        } catch (Exception e) {
+            // Ignora erro se o lock já estava liberado ou não era possuído por esta thread
+        }
     }
     
     @Override
