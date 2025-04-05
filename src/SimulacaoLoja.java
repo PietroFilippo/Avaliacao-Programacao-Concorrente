@@ -1,41 +1,31 @@
 public class SimulacaoLoja {
-    private static final int TEMPO_SIMULACAO_SEGUNDOS = 120;
     
-    public static void main(String[] args) {
-        if (args.length < 2) {
-            System.out.println("Uso: java SimulacaoLoja <id-loja> <ip-fabrica>");
-            System.out.println("Exemplo: java SimulacaoLoja 1 localhost");
-            System.exit(1);
-        }
-        
-        String idLoja = "Loja-" + args[0];
-        String ipFabrica = args[1];
-        int portaFabrica = 8080;
-        
-        System.out.println("Iniciando " + idLoja + " conectando à fábrica em " + ipFabrica + ":" + portaFabrica);
-        
-        // Cria a loja
-        Loja loja = new Loja(idLoja, ipFabrica, portaFabrica);
-        
-        // Inicia a loja em uma thread separada
+
+     // Cria e configura uma nova loja
+    public static Loja criarLoja(String id, String ipFabrica, int porta) {
+        String idLoja = "Loja-" + id;
+        System.out.println("Criando " + idLoja + " conectando à fábrica em " + ipFabrica + ":" + porta);
+        return new Loja(idLoja, ipFabrica, porta);
+    }
+    
+    // Inicia uma loja em uma nova thread
+    public static Thread iniciarLoja(Loja loja) {
         Thread lojaThread = new Thread(loja);
         lojaThread.start();
-        
-        // Executa por tempo determinado
+        System.out.println(loja.getId() + " iniciada");
+        return lojaThread;
+    }
+    
+    // Para uma loja em execução e aguarda o encerramento
+    public static void pararLoja(Loja loja, Thread lojaThread, long timeout) {
         try {
-            System.out.println("Loja em operação. Simulação rodando por " + TEMPO_SIMULACAO_SEGUNDOS + " segundos...");
-            Thread.sleep(TEMPO_SIMULACAO_SEGUNDOS * 1000);
-            
-            // Para a loja
             loja.parar();
-            lojaThread.join(5000);
-            
-            System.out.println(idLoja + " finalizou operação após " + TEMPO_SIMULACAO_SEGUNDOS + " segundos");
-            System.out.println("Total de carros vendidos: " + loja.getCarrosComprados());
-            
+            lojaThread.join(timeout);
+            System.out.println(loja.getId() + " finalizada");
+            System.out.println("Total de carros vendidos: " + loja.getCarrosVendidos());
         } catch (InterruptedException e) {
-            System.out.println("Simulação interrompida");
-            loja.parar();
+            System.out.println("Interrompido durante o encerramento da " + loja.getId());
+            Thread.currentThread().interrupt();
         }
     }
 } 

@@ -2,10 +2,8 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Loja implements Runnable {
     private final String id;
@@ -13,37 +11,46 @@ public class Loja implements Runnable {
     private final String hostname;
     private final int port;
     private final AtomicBoolean running = new AtomicBoolean(true);
-    private int carrosComprados = 0;
+    private int carrosVendidos = 0;
     private Socket socket;
     private ObjectInputStream in;
     private ObjectOutputStream out;
-    private final ExecutorService clienteExecutor;
-    private static final int NUM_CLIENTES = 3;
     
     public Loja(String id, String hostname, int port) {
         this.id = id;
         this.esteira = new EsteiraCircular(Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)));
         this.hostname = hostname;
         this.port = port;
-        this.clienteExecutor = Executors.newFixedThreadPool(NUM_CLIENTES);
+    }
+    
+    // Vende um carro para um cliente, esperando até que um carro esteja disponível ou até timeout
+    public synchronized Carro venderCarro(long timeout, TimeUnit unit) throws InterruptedException {
+        long endTime = System.currentTimeMillis() + unit.toMillis(timeout);
         
-        // Inicia threads de clientes que compram carros da esteira
-        for (int i = 0; i < NUM_CLIENTES; i++) {
-            final int clienteId = i + 1;
-            clienteExecutor.submit(() -> {
-                try {
-                    while (running.get() && !Thread.currentThread().isInterrupted()) {
-                        Carro carro = esteira.removerCarro();
-                        carrosComprados++;
-                        System.out.println("Cliente " + clienteId + " da " + id + " comprou " + carro);
-                        // Simula tempo para próxima compra
-                        Thread.sleep((long) (Math.random() * 5000) + 1000);
-                    }
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            });
+        while (esteira.getTamanhoAtual() == 0) {
+            long waitTime = endTime - System.currentTimeMillis();
+            if (waitTime <= 0) {
+                // Timeout expirado, retorna null
+                return null;
+            }
+            
+            // Espera até que um carro esteja disponível ou até o timeout
+            wait(waitTime);
+            
+            // Verifica novamente se ainda estamos executando
+            if (!running.get() || Thread.currentThread().isInterrupted()) {
+                return null;
+            }
         }
+        
+        // Remove um carro da esteira
+        Carro carro = esteira.removerCarro();
+        carrosVendidos++;
+        
+        // Notifica outras threads que estão esperando
+        notifyAll();
+        
+        return carro;
     }
     
     @Override
@@ -53,24 +60,34 @@ public class Loja implements Runnable {
             
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
-                    // Solicita um carro da fábrica
-                    out.writeObject("SOLICITAR_CARRO");
-                    
-                    // Espera resposta
-                    Object resposta = in.readObject();
-                    
-                    if (resposta instanceof Carro) {
-                        Carro carro = (Carro) resposta;
-                        System.out.println(id + " recebeu carro " + carro + " da fábrica");
-                        esteira.adicionarCarro(carro);
-                    } else if ("SEM_PRODUCAO".equals(resposta)) {
-                        System.out.println(id + " aguardando produção de carros...");
-                        // Aguarda um tempo antes de tentar novamente
-                        Thread.sleep(3000);
+                    // Solicita um carro da fábrica se houver espaço na esteira
+                    if (esteira.temEspaco()) {
+                        out.writeObject("SOLICITAR_CARRO");
+                        
+                        // Espera resposta
+                        Object resposta = in.readObject();
+                        
+                        if (resposta instanceof Carro) {
+                            Carro carro = (Carro) resposta;
+                            System.out.println(id + " recebeu carro " + carro + " da fábrica");
+                            esteira.adicionarCarro(carro);
+                            
+                            // Notifica threads que possam estar esperando por carros
+                            synchronized(this) {
+                                notifyAll();
+                            }
+                        } else if ("SEM_PRODUCAO".equals(resposta)) {
+                            System.out.println(id + " aguardando produção de carros...");
+                            // Aguarda um tempo antes de tentar novamente
+                            Thread.sleep(3000);
+                        }
+                    } else {
+                        // Esteira está cheia, aguarda um pouco
+                        Thread.sleep(1000);
                     }
                     
                     // Pequeno intervalo entre solicitações
-                    Thread.sleep(500);
+                    Thread.sleep(200);
                 } catch (IOException | ClassNotFoundException | InterruptedException e) {
                     if (running.get()) {
                         System.err.println("Erro na comunicação com a fábrica: " + e.getMessage());
@@ -109,13 +126,13 @@ public class Loja implements Runnable {
     public void parar() {
         running.set(false);
         desconectar();
-        clienteExecutor.shutdownNow();
-        try {
-            clienteExecutor.awaitTermination(5, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+        
+        // Notifica todas as threads que possam estar esperando
+        synchronized(this) {
+            notifyAll();
         }
-        System.out.println(id + " parada. Total de carros comprados: " + carrosComprados);
+        
+        System.out.println(id + " parada. Total de carros vendidos: " + carrosVendidos);
     }
     
     private void desconectar() {
@@ -132,7 +149,11 @@ public class Loja implements Runnable {
         return id;
     }
     
-    public int getCarrosComprados() {
-        return carrosComprados;
+    public int getCarrosVendidos() {
+        return carrosVendidos;
+    }
+    
+    public int getCarrosDisponiveisEsteira() {
+        return esteira.getTamanhoAtual();
     }
 } 
