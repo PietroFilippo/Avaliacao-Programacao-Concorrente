@@ -18,7 +18,7 @@ public class Loja implements Runnable {
     
     public Loja(String id, String hostname, int port) {
         this.id = id;
-        this.esteira = new EsteiraCircular(Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)));
+        this.esteira = new EsteiraCircular(Integer.parseInt(id.substring(id.lastIndexOf('-') + 1)), id);
         this.hostname = hostname;
         this.port = port;
     }
