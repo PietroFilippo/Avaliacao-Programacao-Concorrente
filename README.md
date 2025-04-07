@@ -1,7 +1,7 @@
 # Avaliacao-Programacao-Concorrente
 Avaliação de programação concorrente em Java simulando uma cadeia de produção de veículos.
 
-# Execução:
+### Execução:
 
 Para compilar todos os arquivos fonte:
 
