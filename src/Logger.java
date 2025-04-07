@@ -7,21 +7,22 @@ import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Logger para registrar informações de produção e venda de veículos
- */
+
+// Logger para registrar informações de produção e venda de veículos
 public class Logger {
     private static final String ARQUIVO_LOG_PRODUCAO = "log_producao.txt";
-    private static final String ARQUIVO_LOG_VENDAS = "log_vendas.txt";
+    private static final String ARQUIVO_LOG_VENDAS_FABRICA = "log_vendas_fabrica.txt";
+    private static final String ARQUIVO_LOG_RECEBIMENTO_LOJA = "log_recebimento_loja_%s.txt";
+    private static final String ARQUIVO_LOG_VENDAS_LOJA = "log_vendas_loja_%s.txt";
     
     private static final Lock lockLogProducao = new ReentrantLock();
-    private static final Lock lockLogVendas = new ReentrantLock();
+    private static final Lock lockLogVendasFabrica = new ReentrantLock();
+    private static final Lock lockLogRecebimentoLoja = new ReentrantLock();
+    private static final Lock lockLogVendasLoja = new ReentrantLock();
     
     private static final SimpleDateFormat formatoData = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     
-    /**
-     * Registra informações sobre um carro produzido na fábrica
-     */
+    // Registra informações sobre um carro produzido na fábrica
     public static void logProducaoCarro(Carro carro) {
         lockLogProducao.lock();
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(
@@ -46,13 +47,12 @@ public class Logger {
         }
     }
     
-    /**
-     * Registra informações sobre um carro vendido a uma loja
-     */
+
+    // Registra informações sobre um carro vendido pela fábrica a uma loja
     public static void logVendaCarro(Carro carro) {
-        lockLogVendas.lock();
+        lockLogVendasFabrica.lock();
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(
-                new FileWriter(ARQUIVO_LOG_VENDAS, true)))) {
+                new FileWriter(ARQUIVO_LOG_VENDAS_FABRICA, true)))) {
             
             StringBuilder sb = new StringBuilder();
             sb.append(formatoData.format(new Date()))
@@ -66,12 +66,89 @@ public class Logger {
               .append(" | Posição na Esteira da Loja: ").append(carro.getPosicaoEsteiraLoja());
             
             writer.println(sb.toString());
-            System.out.println("Log de venda registrado: Carro " + carro.getId() + " vendido para " + carro.getIdLoja());
+            System.out.println("Log de venda da fábrica registrado: Carro " + carro.getId() + " vendido para " + carro.getIdLoja());
             
         } catch (IOException e) {
-            System.err.println("Erro ao registrar log de venda: " + e.getMessage());
+            System.err.println("Erro ao registrar log de venda da fábrica: " + e.getMessage());
         } finally {
-            lockLogVendas.unlock();
+            lockLogVendasFabrica.unlock();
+        }
+        
+        // Registra também no log de recebimento da loja
+        logRecebimentoCarroLoja(carro);
+    }
+    
+
+    // Registra informações sobre um carro recebido pela loja da fábrica
+    public static void logRecebimentoCarroLoja(Carro carro) {
+        if (carro.getIdLoja() == null) {
+            System.err.println("Erro: Tentativa de registrar recebimento de carro sem ID de loja");
+            return;
+        }
+        
+        lockLogRecebimentoLoja.lock();
+        try {
+            String nomeArquivo = String.format(ARQUIVO_LOG_RECEBIMENTO_LOJA, carro.getIdLoja().replace("-", "_"));
+            
+            try (PrintWriter writer = new PrintWriter(new BufferedWriter(
+                    new FileWriter(nomeArquivo, true)))) {
+                
+                StringBuilder sb = new StringBuilder();
+                sb.append(formatoData.format(new Date()))
+                  .append(" | ID: ").append(carro.getId())
+                  .append(" | Cor: ").append(carro.getCor())
+                  .append(" | Tipo: ").append(carro.getTipo())
+                  .append(" | Estação de Produção: ").append(carro.getIdEstacao())
+                  .append(" | Funcionário Produtor: ").append(carro.getIdFuncionario())
+                  .append(" | Posição na Esteira da Fábrica: ").append(carro.getPosicaoEsteiraFabrica())
+                  .append(" | Posição na Esteira da Loja: ").append(carro.getPosicaoEsteiraLoja());
+                
+                writer.println(sb.toString());
+                
+            } catch (IOException e) {
+                System.err.println("Erro ao registrar log de recebimento de carro pela loja: " + e.getMessage());
+            }
+        } finally {
+            lockLogRecebimentoLoja.unlock();
+        }
+    }
+    
+
+    // Registra informações sobre um carro vendido pela loja para um cliente
+    public static void logVendaCarroLoja(Carro carro) {
+        if (carro.getIdLoja() == null || carro.getIdCliente() == null) {
+            System.err.println("Erro: Tentativa de registrar venda de carro sem ID de loja ou cliente");
+            return;
+        }
+        
+        lockLogVendasLoja.lock();
+        try {
+            String nomeArquivo = String.format(ARQUIVO_LOG_VENDAS_LOJA, carro.getIdLoja().replace("-", "_"));
+            
+            try (PrintWriter writer = new PrintWriter(new BufferedWriter(
+                    new FileWriter(nomeArquivo, true)))) {
+                
+                StringBuilder sb = new StringBuilder();
+                sb.append(formatoData.format(new Date()))
+                  .append(" | ID: ").append(carro.getId())
+                  .append(" | Cor: ").append(carro.getCor())
+                  .append(" | Tipo: ").append(carro.getTipo())
+                  .append(" | Estação de Produção: ").append(carro.getIdEstacao())
+                  .append(" | Funcionário Produtor: ").append(carro.getIdFuncionario())
+                  .append(" | Posição na Esteira da Fábrica: ").append(carro.getPosicaoEsteiraFabrica())
+                  .append(" | Posição na Esteira da Loja: ").append(carro.getPosicaoEsteiraLoja())
+                  .append(" | ID do Cliente: ").append(carro.getIdCliente())
+                  .append(" | Posição na Garagem: ").append(carro.getPosicaoGaragem());
+                
+                writer.println(sb.toString());
+                System.out.println("Log de venda da loja " + carro.getIdLoja() + " registrado: Carro " 
+                        + carro.getId() + " vendido para Cliente " + carro.getIdCliente());
+                
+            } catch (IOException e) {
+                System.err.println("Erro ao registrar log de venda de carro pela loja: " + e.getMessage());
+            }
+        } finally {
+            lockLogVendasLoja.unlock();
         }
     }
 } 

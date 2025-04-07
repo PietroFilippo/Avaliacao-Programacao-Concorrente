@@ -1,5 +1,6 @@
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 // Representa uma esteira circular com capacidade limitada para armazenar carros produzidos
 public class EsteiraCircular {
@@ -38,8 +39,7 @@ public class EsteiraCircular {
             carro.setIdLoja(idLoja);
             carro.setPosicaoEsteiraLoja(posicao);
             
-            // Registra o log de venda
-            Logger.logVendaCarro(carro);
+            // Não registramos log aqui mais - isso é feito pelo Logger.logVendaCarro
         }
         
         carros.put(carro);
@@ -53,21 +53,57 @@ public class EsteiraCircular {
         }
     }
     
-    // Remove um carro da esteira
-    public Carro removerCarro() throws InterruptedException {
+    // Remove e retorna um carro da esteira
+    public synchronized Carro removerCarro() throws InterruptedException {
+        while (carros.isEmpty()) {
+            wait();
+        }
+        
         Carro carro = carros.take();
         
         if (idLoja == null) {
             System.out.println("Carro " + carro + " removido da esteira da estação " + idEstacao + 
-                    " (Itens restantes: " + carros.size() + "/" + CAPACIDADE + ")");
+                    " (Restante: " + carros.size() + "/" + CAPACIDADE + ")");
         } else {
             System.out.println("Carro " + carro + " removido da esteira da loja " + idLoja + 
-                    " (Itens restantes: " + carros.size() + "/" + CAPACIDADE + ")");
+                    " (Restante: " + carros.size() + "/" + CAPACIDADE + ")");
         }
         
-        // Reajusta as posições dos carros restantes
-        // Nota: Não fazemos isso na implementação real por ser ineficiente com ArrayBlockingQueue
+        notifyAll();
+        return carro;
+    }
+    
+    // Remove e retorna um carro da esteira, com timeout
+    public synchronized Carro removerCarro(long timeout, TimeUnit unit) throws InterruptedException {
+        long endTime = System.currentTimeMillis() + unit.toMillis(timeout);
         
+        while (carros.isEmpty()) {
+            long waitTime = endTime - System.currentTimeMillis();
+            if (waitTime <= 0) {
+                // Timeout expirado, retorna null
+                return null;
+            }
+            
+            // Espera até que um carro esteja disponível ou até o timeout
+            wait(waitTime);
+            
+            // Verifica se houve interrupção
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException("Thread interrompida enquanto aguardava carro na esteira");
+            }
+        }
+        
+        Carro carro = carros.take();
+        
+        if (idLoja == null) {
+            System.out.println("Carro " + carro + " removido da esteira da estação " + idEstacao + 
+                    " (Restante: " + carros.size() + "/" + CAPACIDADE + ")");
+        } else {
+            System.out.println("Carro " + carro + " removido da esteira da loja " + idLoja + 
+                    " (Restante: " + carros.size() + "/" + CAPACIDADE + ")");
+        }
+        
+        notifyAll();
         return carro;
     }
     

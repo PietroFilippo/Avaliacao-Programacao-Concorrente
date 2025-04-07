@@ -54,26 +54,6 @@ public class Fabrica {
         }
     }
     
-
-    // Adiciona peças ao estoque (não excedendo a capacidade máxima)
-    public int reabastecerPecas(int quantidade) {
-        if (encerrada) {
-            return 0;
-        }
-        
-        int pecasAtuais = estoquePecas.get();
-        int pecasParaAdicionar = Math.min(quantidade, MAX_PECAS - pecasAtuais);
-        
-        if (pecasParaAdicionar > 0) {
-            estoquePecas.addAndGet(pecasParaAdicionar);
-            System.out.println("Adicionadas " + pecasParaAdicionar + " peças ao estoque. Total atual: " + estoquePecas.get());
-            // Resetamos o flag pois agora temos peças disponíveis novamente
-            estoqueVazioMessageDisplayed.set(false);
-        }
-        
-        return pecasParaAdicionar;
-    }
-    
     // Marca a fábrica como encerrada
     public void encerrar() {
         this.encerrada = true;

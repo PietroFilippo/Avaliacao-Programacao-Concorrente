@@ -1,5 +1,4 @@
 public class SimulacaoLoja {
-    
 
      // Cria e configura uma nova loja
     public static Loja criarLoja(String id, String ipFabrica, int porta) {

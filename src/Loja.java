@@ -23,34 +23,20 @@ public class Loja implements Runnable {
         this.port = port;
     }
     
-    // Vende um carro para um cliente, esperando até que um carro esteja disponível ou até timeout
-    public synchronized Carro venderCarro(long timeout, TimeUnit unit) throws InterruptedException {
-        long endTime = System.currentTimeMillis() + unit.toMillis(timeout);
-        
-        while (esteira.getTamanhoAtual() == 0) {
-            long waitTime = endTime - System.currentTimeMillis();
-            if (waitTime <= 0) {
-                // Timeout expirado, retorna null
-                return null;
+
+    // Vende o primeiro carro disponível na esteira da loja e se não houver carros, retorna null
+    public Carro venderCarro(long timeout, TimeUnit unit) throws InterruptedException {
+        try {
+            Carro carro = esteira.removerCarro(timeout, unit);
+            if (carro != null) {
+                carrosVendidos++;
+                System.out.println(id + " vendeu o carro " + carro + " (Total vendido: " + carrosVendidos + ")");
             }
-            
-            // Espera até que um carro esteja disponível ou até o timeout
-            wait(waitTime);
-            
-            // Verifica novamente se ainda estamos executando
-            if (!running.get() || Thread.currentThread().isInterrupted()) {
-                return null;
-            }
+            return carro;
+        } catch (InterruptedException e) {
+            System.out.println(id + " interrompido ao tentar vender carro");
+            throw e;
         }
-        
-        // Remove um carro da esteira
-        Carro carro = esteira.removerCarro();
-        carrosVendidos++;
-        
-        // Notifica outras threads que estão esperando
-        notifyAll();
-        
-        return carro;
     }
     
     @Override
