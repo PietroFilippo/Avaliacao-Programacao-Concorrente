@@ -46,12 +46,10 @@ Para executar em computadores diferentes:
 
 ## Arquivos de Log
 
-Durante a execução, o sistema gera vários arquivos de log:
+Durante a execução, o sistema gera os seguintes arquivos de log:
 
 - `log_producao.txt`: Registra todos os veículos produzidos na fábrica
-- `log_vendas_fabrica.txt`: Registra vendas da fábrica para as lojas
 - `log_vendas_loja_Loja_X.txt`: Registra vendas de cada loja para os clientes
-- `log_recebimento_loja_Loja_X.txt`: Registra veículos recebidos pelas lojas
 
 ## Arquitetura do Sistema
 
