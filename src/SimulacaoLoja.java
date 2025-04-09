@@ -1,13 +1,11 @@
 public class SimulacaoLoja {
 
-     // Cria e configura uma nova loja
     public static Loja criarLoja(String id, String ipFabrica, int porta) {
         String idLoja = "Loja-" + id;
         System.out.println("Criando " + idLoja + " conectando à fábrica em " + ipFabrica + ":" + porta);
         return new Loja(idLoja, ipFabrica, porta);
     }
     
-    // Inicia uma loja em uma nova thread
     public static Thread iniciarLoja(Loja loja) {
         Thread lojaThread = new Thread(loja);
         lojaThread.start();
@@ -15,7 +13,6 @@ public class SimulacaoLoja {
         return lojaThread;
     }
     
-    // Para uma loja em execução e aguarda o encerramento
     public static void pararLoja(Loja loja, Thread lojaThread, long timeout) {
         try {
             loja.parar();

@@ -23,8 +23,6 @@ public class Loja implements Runnable {
         this.port = port;
     }
     
-
-    // Vende o primeiro carro disponível na esteira da loja e se não houver carros, retorna null
     public Carro venderCarro(long timeout, TimeUnit unit) throws InterruptedException {
         try {
             Carro carro = esteira.removerCarro(timeout, unit);
@@ -46,11 +44,9 @@ public class Loja implements Runnable {
             
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
-                    // Solicita um carro da fábrica se houver espaço na esteira
                     if (esteira.temEspaco()) {
                         out.writeObject("SOLICITAR_CARRO");
                         
-                        // Espera resposta
                         Object resposta = in.readObject();
                         
                         if (resposta instanceof Carro) {
@@ -58,26 +54,21 @@ public class Loja implements Runnable {
                             System.out.println(id + " recebeu carro " + carro + " da fábrica");
                             esteira.adicionarCarro(carro);
                             
-                            // Notifica threads que possam estar esperando por carros
                             synchronized(this) {
                                 notifyAll();
                             }
                         } else if ("SEM_PRODUCAO".equals(resposta)) {
                             System.out.println(id + " aguardando produção de carros...");
-                            // Aguarda um tempo antes de tentar novamente
                             Thread.sleep(3000);
                         }
                     } else {
-                        // Esteira está cheia, aguarda um pouco
                         Thread.sleep(1000);
                     }
                     
-                    // Pequeno intervalo entre solicitações
                     Thread.sleep(200);
                 } catch (IOException | ClassNotFoundException | InterruptedException e) {
                     if (running.get()) {
                         System.err.println("Erro na comunicação com a fábrica: " + e.getMessage());
-                        // Tenta reconectar
                         try {
                             Thread.sleep(5000);
                             conectarFabrica();
@@ -113,7 +104,6 @@ public class Loja implements Runnable {
         running.set(false);
         desconectar();
         
-        // Notifica todas as threads que possam estar esperando
         synchronized(this) {
             notifyAll();
         }

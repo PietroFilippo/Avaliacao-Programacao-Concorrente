@@ -1,14 +1,11 @@
 import java.io.Serializable;
 
-// Representa um carro produzido por um funcionário em uma estação de produção
 public class Carro implements Serializable {
     private static final long serialVersionUID = 1L;
     
-    // Enums para Cor e Tipo
     public enum Cor { VERMELHO, VERDE, AZUL }
     public enum Tipo { SUV, SEDAN }
     
-    // Contadores para alternar cor e tipo
     private static int contadorCor = 0;
     private static int contadorTipo = 0;
     private static int proximoId = 1;
@@ -23,26 +20,21 @@ public class Carro implements Serializable {
     private Integer posicaoEsteiraFabrica;
     private Integer posicaoEsteiraLoja;
     
-    // Atributos relacionados ao cliente
     private String idCliente;
     private Integer posicaoGaragem;
     
-    // Construtor
     public Carro(Integer idEstacao, Integer idFuncionario) {
         this.id = proximoId++;
         this.idEstacao = idEstacao;
         this.idFuncionario = idFuncionario;
         
-        // Alternância de cor: VERMELHO -> VERDE -> AZUL -> VERMELHO ...
         this.cor = Cor.values()[contadorCor];
         contadorCor = (contadorCor + 1) % Cor.values().length;
         
-        // Alternância de tipo: SUV -> SEDAN -> SUV ...
         this.tipo = Tipo.values()[contadorTipo];
         contadorTipo = (contadorTipo + 1) % Tipo.values().length;
     }
 
-    // Getters
     public Integer getId() {
         return id;
     }
@@ -87,7 +79,6 @@ public class Carro implements Serializable {
         this.posicaoEsteiraLoja = posicaoEsteiraLoja;
     }
     
-    // Métodos relacionados ao cliente
     public String getIdCliente() {
         return idCliente;
     }

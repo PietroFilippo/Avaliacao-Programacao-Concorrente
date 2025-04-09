@@ -20,17 +20,13 @@ public class Cliente implements Runnable {
     public void run() {
         try {
             while (running && !Thread.currentThread().isInterrupted()) {
-                // Escolhe uma loja aleatoriamente
                 Loja lojaEscolhida = lojas.get(random.nextInt(lojas.size()));
                 
                 System.out.println(id + " está tentando comprar um carro da " + lojaEscolhida.getId());
                 
-                // Tenta comprar um carro da loja escolhida
                 if (comprarCarro(lojaEscolhida)) {
-                    // Espera um tempo aleatório antes da próxima compra (1-5 segundos)
                     Thread.sleep(random.nextInt(4000) + 1000);
                 } else {
-                    // Se não conseguiu comprar, tenta novamente após um curto período
                     Thread.sleep(500);
                 }
             }
@@ -45,11 +41,9 @@ public class Cliente implements Runnable {
     
     private boolean comprarCarro(Loja loja) throws InterruptedException {
         try {
-            // Tenta comprar um carro, com timeout para evitar bloqueio indefinido
             Carro carro = loja.venderCarro(2, TimeUnit.SECONDS);
             
             if (carro != null) {
-                // Adiciona o carro à garagem do cliente
                 int posicaoGaragem = garagem.adicionarCarro(carro);
                 carrosComprados++;
                 

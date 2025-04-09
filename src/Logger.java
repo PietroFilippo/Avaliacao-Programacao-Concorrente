@@ -7,8 +7,6 @@ import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-
-// Logger para registrar informações de produção e venda de veículos
 public class Logger {
     private static final String ARQUIVO_LOG_PRODUCAO = "log_producao.txt";
     private static final String ARQUIVO_LOG_VENDAS_FABRICA = "log_vendas_fabrica.txt";
@@ -22,7 +20,6 @@ public class Logger {
     
     private static final SimpleDateFormat formatoData = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     
-    // Registra informações sobre um carro produzido na fábrica
     public static void logProducaoCarro(Carro carro) {
         lockLogProducao.lock();
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(
@@ -47,8 +44,6 @@ public class Logger {
         }
     }
     
-
-    // Registra informações sobre um carro vendido pela fábrica a uma loja
     public static void logVendaCarro(Carro carro) {
         lockLogVendasFabrica.lock();
         try (PrintWriter writer = new PrintWriter(new BufferedWriter(
@@ -74,12 +69,9 @@ public class Logger {
             lockLogVendasFabrica.unlock();
         }
         
-        // Registra também no log de recebimento da loja
         logRecebimentoCarroLoja(carro);
     }
     
-
-    // Registra informações sobre um carro recebido pela loja da fábrica
     public static void logRecebimentoCarroLoja(Carro carro) {
         if (carro.getIdLoja() == null) {
             System.err.println("Erro: Tentativa de registrar recebimento de carro sem ID de loja");
@@ -113,8 +105,6 @@ public class Logger {
         }
     }
     
-
-    // Registra informações sobre um carro vendido pela loja para um cliente
     public static void logVendaCarroLoja(Carro carro) {
         if (carro.getIdLoja() == null || carro.getIdCliente() == null) {
             System.err.println("Erro: Tentativa de registrar venda de carro sem ID de loja ou cliente");

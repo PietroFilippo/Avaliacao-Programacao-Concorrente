@@ -2,10 +2,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-// Representa uma ferramenta usada por funcionários nas estações de produção
 public class Ferramenta {
     private final int id;
-    private final Lock lock = new ReentrantLock(true); // Lock justo para evitar starvation
+    private final Lock lock = new ReentrantLock(true);
     
     public Ferramenta(int id) {
         this.id = id;
@@ -17,7 +16,6 @@ public class Ferramenta {
     
     public boolean pegar() {
         try {
-            // Tenta adquirir o lock com timeout de 100ms para evitar espera indefinida
             return lock.tryLock(100, TimeUnit.MILLISECONDS);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -28,11 +26,10 @@ public class Ferramenta {
     public void soltar() {
         try {
             if (lock.tryLock(0, TimeUnit.MILLISECONDS)) {
-                lock.unlock(); // Já tinha o lock, libera o extra
+                lock.unlock(); 
             }
-            lock.unlock(); // Libera o lock original
+            lock.unlock(); 
         } catch (Exception e) {
-            // Ignora erro se o lock já estava liberado ou não era possuído por esta thread
         }
     }
     

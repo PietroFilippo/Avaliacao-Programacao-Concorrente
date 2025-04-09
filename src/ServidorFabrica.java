@@ -27,16 +27,13 @@ public class ServidorFabrica implements Runnable {
             serverSocket = new ServerSocket(porta);
             System.out.println("Servidor da fábrica iniciado na porta " + porta);
             
-            // Thread para coletar carros das esteiras de produção
             threadPool.submit(this::coletarCarrosDasEsteiras);
             
-            // Thread principal para aceitar conexões
             while (running.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     System.out.println("Nova conexão de loja: " + clientSocket.getInetAddress());
                     
-                    // Cria thread para atender a loja
                     threadPool.submit(() -> atenderLoja(clientSocket));
                 } catch (IOException e) {
                     if (running.get()) {
@@ -54,11 +51,9 @@ public class ServidorFabrica implements Runnable {
     private void coletarCarrosDasEsteiras() {
         try {
             while (running.get() && !Thread.currentThread().isInterrupted()) {
-                // Verifica todas as estações de produção para coletar carros
                 for (EstacaoProducao estacao : SimulacaoProducaoVeiculos.getEstacoesProducao()) {
                     EsteiraCircular esteira = estacao.getEsteira();
                     
-                    // Se há carros na esteira, pega um para disponibilizar às lojas
                     if (esteira.getTamanhoAtual() > 0) {
                         try {
                             Carro carro = esteira.removerCarro();
@@ -71,7 +66,6 @@ public class ServidorFabrica implements Runnable {
                     }
                 }
                 
-                // Aguarda um pouco antes de verificar novamente
                 try {
                     Thread.sleep(500);
                 } catch (InterruptedException e) {
@@ -91,20 +85,16 @@ public class ServidorFabrica implements Runnable {
         ) {
             while (running.get() && !Thread.currentThread().isInterrupted() && !clientSocket.isClosed()) {
                 try {
-                    // Recebe solicitação da loja
                     Object solicitacao = in.readObject();
                     
                     if ("SOLICITAR_CARRO".equals(solicitacao)) {
-                        // Tenta obter um carro disponível (com timeout)
                         Carro carro = carrosDisponiveis.poll(1, TimeUnit.SECONDS);
                         
                         if (carro != null) {
-                            // Envia o carro para a loja
                             out.writeObject(carro);
                             out.flush();
                             System.out.println("Carro " + carro + " enviado para " + clientSocket.getInetAddress());
                         } else {
-                            // Informa que não há carros disponíveis no momento
                             out.writeObject("SEM_PRODUCAO");
                             out.flush();
                         }
